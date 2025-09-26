@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نَشمي — FarmBot Control</title>
+<style>
+:root{--red:#b71c1c;--white:#fff;--glass:rgba(0,0,0,0.45);}
+html,body{height:100%;margin:0;font-family:Tahoma,Arial,sans-serif;direction:rtl;background:var(--red);color:var(--white);}
+body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(circle, rgba(0,0,0,0.9) 0 18px, transparent 20px);background-size:90px 90px;opacity:0.28;pointer-events:none;}
+
+/* Cards & Panels */
+.card,.panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;background:var(--glass);border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.5);text-align:center;width:360px;max-width:92%;}
+.hidden{display:none !important;}
+
+/* Inputs & Buttons */
+input[type=password]{width:100%;padding:10px;border-radius:8px;border:none;background: rgba(255,255,255,0.08);color:var(--white);}
+button{padding:10px 14px;border:none;border-radius:10px;background:var(--white);color:var(--red);font-weight:700;cursor:pointer;}
+button:disabled{background:#bfbfbf;color:#666;cursor:not-allowed;}
+
+/* Car Controls */
+.driveGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;justify-items:center;align-items:center;margin-top:10px;}
+.driveGrid button{width:160px;height:50px;font-size:16px;border-radius:10px;}
+
+/* Arm Controls */
+.servoRow{display:flex;gap:8px;align-items:center;justify-content:center;margin:6px 0;}
+.servoRow label{min-width:160px;text-align:left;color:#ffd4c4;font-weight:600;}
+
+/* Iframes */
+iframe{width:100%;border-radius:8px;border:1px solid rgba(255,255,255,0.06);}
+
+/* Robot Name */
+#robotName{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:4;background:var(--glass);padding:6px 14px;border-radius:10px;font-weight:700;display:none;}
+
+/* Corner Buttons */
+.cornerBtn{position:fixed;z-index:5;padding:10px 12px;border-radius:10px;font-weight:700;background:var(--white);color:var(--red);cursor:pointer;display:none;}
+#langBtn{top:10px;left:10px;}
+#powerBtn{top:10px;right:10px;}
+#helpBtn{bottom:10px;right:10px;}
+#exitBtn{bottom:10px;left:10px;}
+
+/* Center wrapper for buttons */
+.centerBtnWrapper{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+
+<!-- Robot Name -->
+<div id="robotName">نَشمي</div>
+
+<!-- Corner Buttons -->
+<button id="langBtn" class="cornerBtn">EN</button>
+<button id="powerBtn" class="cornerBtn">تشغيل</button>
+<button id="helpBtn" class="cornerBtn">تعليمات</button>
+<button id="exitBtn" class="cornerBtn">Exit</button>
+
+<!-- Login -->
+<div id="loginCard" class="card">
+  <h2 id="lblEnter">أدخل الكود</h2>
+  <input id="inpCode" type="password" placeholder="أدخل الرمز">
+  <div class="centerBtnWrapper">
+    <button id="btnLogin">دخول</button>
+  </div>
+</div>
+
+<!-- Main Menu -->
+<div id="mainMenu" class="card hidden">
+  <h3 id="menuTitle">قائمة التحكم</h3>
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <button id="btnAutonomous">الوضع الذاتي</button>
+    <button id="btnRemote">التحكم عن بُعد</button>
+  </div>
+</div>
+
+<!-- Autonomous Panel -->
+<div id="autoPanel" class="panel hidden">
+  <h3 id="autoTitle">الوضع الذاتي</h3>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+    <button id="btnFiles">الملفات</button>
+    <button id="btnAutoCam">رؤية الكاميرا</button>
+  </div>
+  <div id="filesArea" class="hidden" style="margin-top:12px;">
+    <div style="font-size:14px;margin-bottom:8px">صور تجريبية:</div>
+    <div id="imagesWrap" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+  </div>
+  <div id="autoCamArea" class="hidden" style="margin-top:12px;">
+    <iframe id="camViewAuto" src="" frameborder="0" style="height:320px;"></iframe>
+  </div>
+</div>
+
+<!-- Remote Control Panel -->
+<div id="remotePanel" class="panel hidden">
+  <h3 id="remoteTitle">التحكم عن بُعد</h3>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+    <button id="btnCar">السيارة</button>
+    <button id="btnArm">ذراع التحكم</button>
+  </div>
+</div>
+
+<!-- Car Panel -->
+<div id="carPanel" class="panel hidden">
+  <h3 id="carTitle">السيارة</h3>
+  <div class="driveGrid">
+    <button id="btnF" disabled>أمام</button>
+    <button id="btnB" disabled>خلف</button>
+    <button id="btnL" disabled>يسار</button>
+    <button id="btnR" disabled>يمين</button>
+  </div>
+  <button id="btnCarCam" style="margin-top:6px;">كاميرا</button>
+  <div id="carCamArea" class="hidden" style="margin-top:12px;">
+    <iframe id="camViewCar" src="" frameborder="0" style="height:220px;"></iframe>
+  </div>
+</div>
+
+<!-- Arm Panel -->
+<div id="armPanel" class="panel hidden">
+  <h3 id="armTitle">الذراع</h3>
+  <div class="servoRow">
+    <label>قاعدة الذراع يمين/يسار</label>
+    <button id="armBaseR" disabled>+</button>
+    <button id="armBaseL" disabled>-</button>
+  </div>
+  <div class="servoRow">
+    <label>رفع/خفض الذراع</label>
+    <button id="armUp" disabled>+</button>
+    <button id="armDown" disabled>-</button>
+  </div>
+  <div class="servoRow">
+    <label>قدم الذراع للأمام/للخلف</label>
+    <button id="armForward" disabled>+</button>
+    <button id="armBackward" disabled>-</button>
+  </div>
+  <div class="servoRow">
+    <label>مسكة الذراع</label>
+    <button id="armGrab" disabled>فتح</button>
+    <button id="armRelease" disabled>إغلاق</button>
+  </div>
+  <button id="btnArmCam" style="margin-top:6px;">كاميرا</button>
+  <div id="armCamArea" class="hidden" style="margin-top:12px;">
+    <iframe id="camViewArm" src="" frameborder="0" style="height:220px;"></iframe>
+  </div>
+</div>
+
+<script>
+let lang="ar";
+const code="321456";
+const loginCard=document.getElementById('loginCard');
+const mainMenu=document.getElementById('mainMenu');
+const autoPanel=document.getElementById('autoPanel');
+const remotePanel=document.getElementById('remotePanel');
+const carPanel=document.getElementById('carPanel');
+const armPanel=document.getElementById('armPanel');
+const powerBtn=document.getElementById('powerBtn');
+const exitBtn=document.getElementById('exitBtn');
+const langBtn=document.getElementById('langBtn');
+const helpBtn=document.getElementById('helpBtn');
+const robotName=document.getElementById('robotName');
+const inpCode=document.getElementById('inpCode');
+let stack=[];
+let isPower=false;
+let ipCar="192.168.1.100"; 
+let ipCam="192.168.1.101";
+
+// ===== دوال اللغة =====
+function updateLanguage(){
+  if(lang=="ar"){
+    robotName.innerText="نَشمي";
+    document.getElementById('lblEnter').innerText="أدخل الكود";
+    document.getElementById('btnLogin').innerText="دخول";
+    document.getElementById('menuTitle').innerText="قائمة التحكم";
+    document.getElementById('btnAutonomous').innerText="الوضع الذاتي";
+    document.getElementById('btnRemote').innerText="التحكم عن بُعد";
+    document.getElementById('autoTitle').innerText="الوضع الذاتي";
+    document.getElementById('btnFiles').innerText="الملفات";
+    document.getElementById('btnAutoCam').innerText="رؤية الكاميرا";
+    document.getElementById('remoteTitle').innerText="التحكم عن بُعد";
+    document.getElementById('btnCar').innerText="السيارة";
+    document.getElementById('btnArm').innerText="ذراع التحكم";
+    document.getElementById('carTitle').innerText="السيارة";
+    document.getElementById('armTitle').innerText="الذراع";
+    langBtn.innerText="EN";
+    helpBtn.innerText="تعليمات";
+    powerBtn.innerText=isPower?"ايقاف":"تشغيل";
+    exitBtn.innerText="Exit";
+    document.getElementById('btnCarCam').innerText="كاميرا";
+    document.getElementById('btnArmCam').innerText="كاميرا";
+  } else {
+    robotName.innerText="Nashmi";
+    document.getElementById('lblEnter').innerText="Enter Code";
+    document.getElementById('btnLogin').innerText="Login";
+    document.getElementById('menuTitle').innerText="Control Menu";
+    document.getElementById('btnAutonomous').innerText="Autonomous";
+    document.getElementById('btnRemote').innerText="Remote Control";
+    document.getElementById('autoTitle').innerText="Autonomous";
+    document.getElementById('btnFiles').innerText="Files";
+    document.getElementById('btnAutoCam').innerText="Camera View";
+    document.getElementById('remoteTitle').innerText="Remote Control";
+    document.getElementById('btnCar').innerText="Car";
+    document.getElementById('btnArm').innerText="Arm";
+    document.getElementById('carTitle').innerText="Car";
+    document.getElementById('armTitle').innerText="Arm";
+    langBtn.innerText="AR";
+    helpBtn.innerText="Help";
+    powerBtn.innerText=isPower?"Stop":"Power";
+    exitBtn.innerText="Exit";
+    document.getElementById('btnCarCam').innerText="Camera";
+    document.getElementById('btnArmCam').innerText="Camera";
+  }
+}
+
+// ===== الأحداث =====
+langBtn.addEventListener('click',()=>{lang=(lang=="ar")?"en":"ar"; updateLanguage();});
+document.getElementById('btnLogin').addEventListener('click',()=>{
+  if(inpCode.value==code){
+    loginCard.classList.add('hidden');
+    mainMenu.classList.remove('hidden');
+    robotName.style.display="block";
+    [langBtn,helpBtn,exitBtn,powerBtn].forEach(b=>b.style.display="block");
+    stack.push(mainMenu);
+  } else {alert(lang=="ar"?"الكود خاطئ":"Wrong code");}
+});
+
+document.getElementById('btnAutonomous').addEventListener('click',()=>{
+  if(isPower){mainMenu.classList.add('hidden'); autoPanel.classList.remove('hidden'); stack.push(mainMenu);}
+  else alert(lang=="ar"?"اضغط تشغيل أولاً":"Press Power first");
+});
+document.getElementById('btnRemote').addEventListener('click',()=>{
+  if(isPower){mainMenu.classList.add('hidden'); remotePanel.classList.remove('hidden'); stack.push(mainMenu);}
+  else alert(lang=="ar"?"اضغط تشغيل أولاً":"Press Power first");
+});
+exitBtn.addEventListener('click',()=>{
+  if(stack.length>0){ const prev=stack.pop(); [autoPanel,remotePanel,carPanel,armPanel,mainMenu].forEach(p=>p.classList.add('hidden')); prev.classList.remove('hidden'); }
+});
+
+// الوضع الذاتي
+document.getElementById('btnFiles').addEventListener('click',()=>document.getElementById('filesArea').classList.toggle('hidden'));
+document.getElementById('btnAutoCam').addEventListener('click',()=>{
+  document.getElementById('autoCamArea').classList.toggle('hidden');
+  document.getElementById('camViewAuto').src=`http://${ipCam}/stream`;
+});
+
+// التحكم عن بعد
+document.getElementById('btnCar').addEventListener('click',()=>{remotePanel.classList.add('hidden'); carPanel.classList.remove('hidden'); stack.push(remotePanel);});
+document.getElementById('btnArm').addEventListener('click',()=>{remotePanel.classList.add('hidden'); armPanel.classList.remove('hidden'); stack.push(remotePanel);});
+
+// تشغيل/ايقاف
+powerBtn.addEventListener('click',()=>{
+  const btns=[...document.querySelectorAll('#carPanel button, #armPanel button')];
+  isPower=!isPower;
+  updateLanguage();
+  btns.forEach(b=>b.disabled=!isPower);
+});
+
+// أزرار السيارة
+['btnF','btnB','btnL','btnR'].forEach(id=>{
+  const btn=document.getElementById(id);
+  btn.addEventListener('mousedown',()=>sendCommand(ipCar,id));
+  btn.addEventListener('mouseup',()=>sendCommand(ipCar,'stop'));
+  btn.addEventListener('mouseleave',()=>sendCommand(ipCar,'stop'));
+});
+
+// أزرار الذراع
+['armBaseR','armBaseL','armUp','armDown','armForward','armBackward','armGrab','armRelease'].forEach(id=>{
+  const btn=document.getElementById(id);
+  btn.addEventListener('mousedown',()=>sendCommand(ipCar,id));
+  btn.addEventListener('mouseup',()=>sendCommand(ipCar,'stop'));
+  btn.addEventListener('mouseleave',()=>sendCommand(ipCar,'stop'));
+});
+
+// كاميرات السيارة والذراع
+document.getElementById('btnCarCam').addEventListener('click',()=>{document.getElementById('carCamArea').classList.toggle('hidden');document.getElementById('camViewCar').src=`http://${ipCam}/stream`;});
+document.getElementById('btnArmCam').addEventListener('click',()=>{document.getElementById('armCamArea').classList.toggle('hidden');document.getElementById('camViewArm').src=`http://${ipCam}/stream`;});
+
+function sendCommand(ip, cmd){fetch(`http://${ip}/${cmd}`).catch(e=>console.log("ESP32 not reachable"));}
+
+updateLanguage();
+</script>
+</body>
+</html>
